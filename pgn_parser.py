@@ -1,22 +1,36 @@
 import sys
+import collections
 
 filename = sys.argv[1]
 
 game_info = {}
 game_count = 0
 game_lines = []
-crazyhouse_game = False
 
 KNOWN_LABELS = ["Event", "Site", "FICSGamesDBGameNo", "White", "Black",
                 "WhiteElo", "BlackElo", "TimeControl", "Date", "Time",
                 "WhiteClock", "BlackClock", "PlyCount", "Result",
-                "BlackIsComp", "WhiteIsComp", "Variant", "FEN"]
+                "BlackIsComp", "WhiteIsComp", "Variant", "FEN", "SetUp",
+                "WhiteRD", "BlackRD"]
+
+elo_ratings = collections.defaultdict(int)
+
+# START HERE: Take all the crazyhouse .pgn files, and make a "top-rated" set
+#             of games where both players are 2200(?) and above.
+#             Then, start using this to make an opening book, maybe.
+#             Also, modify this to be importable into our main program.
+
+def handle_game():
+  black_elo = int(game_info["BlackElo"])
+  white_elo = int(game_info["WhiteElo"])
+  black_elo /= 100
+  white_elo /= 100
+  elo_ratings[black_elo] += 1
+  elo_ratings[white_elo] += 1
 
 with open(filename, "r") as file_in:
   for line in file_in:
     game_lines.append(line)
-    if "crazyhouse" in line.lower():
-      crazyhouse_game = True
     if line[0] == "[":
       # -3 because of the assert below
       label, info = line[1:-3].split(" ", 1)
@@ -33,10 +47,9 @@ with open(filename, "r") as file_in:
     if line == "\r\n":
       continue
     if line == "\n":
-      if crazyhouse_game:
-        for line in game_lines:
-          print line,
+      handle_game()
       game_lines = []
       game_info = {}
       game_count += 1
-      crazyhouse_game = False
+
+print elo_ratings
